@@ -9,8 +9,7 @@ interface IntervalCardProps {
 }
 
 const IntervalCard = ({ interval }: IntervalCardProps) => {
-    // Используем дефолтное изображение сразу, чтобы избежать лишних запросов
-    const imageUrl = DEFAULT_INTERVAL_IMAGE
+    const imageUrl = interval.photo || DEFAULT_INTERVAL_IMAGE
 
     return (
         <Card className="interval-card h-100">
