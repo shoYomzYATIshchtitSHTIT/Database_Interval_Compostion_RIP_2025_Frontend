@@ -7,15 +7,18 @@ import App from './App.tsx'
 import { registerSW } from "virtual:pwa-register"
 import 'bootstrap/dist/css/bootstrap.min.css'
 import './index.css'
+import { checkAuth } from './store/slices/authSlice';
 
 if ("serviceWorker" in navigator) {
     registerSW()
 }
 
+store.dispatch(checkAuth());
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <Provider store={store}>
-            <BrowserRouter basename="/Frontend-RIP">
+            <BrowserRouter>
                 <App />
             </BrowserRouter>
 

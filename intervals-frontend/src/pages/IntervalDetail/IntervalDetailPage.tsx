@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Container, Row, Col, Card, Spinner, Alert } from 'react-bootstrap'
 import type { Interval } from '../../types/interval'
-import { intervalsApi } from '../../services/api'
+import { intervalsApiWithMock, DEFAULT_INTERVAL_IMAGE } from '../../services/apiWithMock'
 import Breadcrumbs from '../../components/Breadcrumbs/Breadcrumbs'
 import './IntervalDetailPage.css'
 
@@ -14,12 +14,19 @@ const IntervalDetailPage = () => {
 
     useEffect(() => {
         const loadInterval = async () => {
-            if (!id) return
+            if (!id || isNaN(parseInt(id))) {
+                setError('Неверный ID интервала')
+                setLoading(false)
+                return
+            }
 
             try {
                 setLoading(true)
                 setError(null)
-                const intervalData = await intervalsApi.getInterval(parseInt(id))
+                const intervalId = parseInt(id)
+                console.log('Загрузка интервала с ID:', intervalId)
+
+                const intervalData = await intervalsApiWithMock.getInterval(intervalId)
                 setInterval(intervalData)
             } catch (err) {
                 setError('Не удалось загрузить информацию об интервале')
@@ -73,7 +80,7 @@ const IntervalDetailPage = () => {
                             <Col md={6}>
                                 <div className="image-container">
                                     <img
-                                        src={interval.photo}
+                                        src={interval.photo || DEFAULT_INTERVAL_IMAGE}
                                         alt={interval.title}
                                         className="detail-image"
                                     />

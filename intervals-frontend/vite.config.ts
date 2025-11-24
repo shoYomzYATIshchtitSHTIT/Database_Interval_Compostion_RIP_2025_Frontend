@@ -8,19 +8,19 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       devOptions: {
-        enabled: false, // Отключаем в продакшене
+        enabled: false,
       },
       manifest: {
         name: "База музыкальных интервалов",
         short_name: "Интервалы",
-        start_url: "/Frontend-RIP/", // ВАЖНО: полный путь
+        start_url: "/",                      // ← Исправлено
         display: "standalone",
         background_color: "#7978F7",
         theme_color: "#7978F7",
         orientation: "portrait-primary",
         icons: [
-          { src: "img/image192.png", type: "image/png", sizes: "192x192" }, // убрали ведущий '/'
-          { src: "img/image512.png", type: "image/png", sizes: "512x512" }  // убрали ведущий '/'
+          { src: "/img/image192.png", type: "image/png", sizes: "192x192" },
+          { src: "/img/image512.png", type: "image/png", sizes: "512x512" }
         ],
       },
       workbox: {
@@ -28,10 +28,13 @@ export default defineConfig({
       }
     })
   ],
-  base: "/Frontend-RIP/",
+
+  base: "/",
+
   server: {
     port: 3000,
     host: true,
+
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

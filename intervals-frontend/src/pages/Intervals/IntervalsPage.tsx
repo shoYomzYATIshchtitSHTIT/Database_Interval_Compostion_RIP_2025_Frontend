@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Container, Spinner, Alert } from 'react-bootstrap'
-import type { Interval, IntervalFilters } from '../../types/interval'
-import { intervalsApi } from '../../services/api'
+import { useSelector, useDispatch } from 'react-redux'
+import type { RootState, AppDispatch } from '../../store'
+import { getIntervals, setFilters } from '../../store/slices/intervalsSlice'
+import { getCompositionCart, addIntervalToComposition } from '../../store/slices/compositionsSlice'
 import { useFilters } from '../../store/slices/filtersSlice'
 import Filters from '../../components/Filters/Filters'
 import IntervalCard from '../../components/IntervalCard/IntervalCard'
@@ -9,32 +11,47 @@ import { ROUTE_LABELS } from '../../utils/routes'
 import './IntervalsPage.css'
 
 const IntervalsPage = () => {
-    const [intervals, setIntervals] = useState<Interval[]>([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-
+    const { intervals, loading, error } = useSelector((state: RootState) => state.intervals)
+    const { cart } = useSelector((state: RootState) => state.compositions)
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth)
     const filtersFromStore = useFilters()
+    const dispatch = useDispatch<AppDispatch>()
 
     useEffect(() => {
-        loadIntervals(filtersFromStore)
-    }, [filtersFromStore])
+        // Загружаем интервалы с текущими фильтрами
+        dispatch(getIntervals(filtersFromStore))
 
-    const loadIntervals = async (filters: IntervalFilters) => {
+        // Загружаем корзину для авторизованных пользователей
+        if (isAuthenticated) {
+            dispatch(getCompositionCart())
+        }
+    }, [dispatch, filtersFromStore, isAuthenticated])
+
+    const handleFiltersChange = (filters: any) => {
+        // Обновляем фильтры в store и загружаем интервалы
+        dispatch(setFilters(filters))
+        dispatch(getIntervals(filters))
+    }
+
+    const handleAddToCart = async (intervalId: number) => {
+        if (!isAuthenticated) {
+            return
+        }
+
         try {
-            setLoading(true)
-            setError(null)
-            const data = await intervalsApi.getIntervals(filters)
-            setIntervals(data)
-        } catch (err) {
-            setError('Не удалось загрузить интервалы')
-            console.error('Error loading intervals:', err)
-        } finally {
-            setLoading(false)
+            await dispatch(addIntervalToComposition({
+                interval_id: intervalId,
+                amount: 1
+            })).unwrap()
+        } catch (err: any) {
+            console.error('Ошибка при добавлении в заявку:', err)
         }
     }
 
-    const handleFiltersChange = (filters: IntervalFilters) => {
-        loadIntervals(filters)
+    const handleCartClick = () => {
+        if (cart.compositionId) {
+            window.location.href = `/compositions/${cart.compositionId}`
+        }
     }
 
     return (
@@ -70,7 +87,11 @@ const IntervalsPage = () => {
                 <>
                     <div className="intervals-grid">
                         {intervals.map((interval) => (
-                            <IntervalCard key={interval.id} interval={interval} />
+                            <IntervalCard
+                                key={interval.id} // Используем id как ключ
+                                interval={interval}
+                                onAddToCart={isAuthenticated ? () => handleAddToCart(interval.id) : undefined}
+                            />
                         ))}
                     </div>
 
@@ -80,6 +101,26 @@ const IntervalsPage = () => {
                         </p>
                     </div>
                 </>
+            )}
+
+            {/* Иконка лупы */}
+            {isAuthenticated && (
+                <div
+                    className={`loupe-icon ${cart.itemCount > 0 ? 'active' : 'inactive'}`}
+                    onClick={handleCartClick}
+                    title={cart.itemCount > 0 ? 'Перейти к заявке' : 'Заявка пуста'}
+                >
+                    <img
+                        src={cart.itemCount > 0 ? '/img/loupe.png' : '/img/loupe_grey.png'}
+                        alt="Корзина заявки"
+                        className="loupe-image"
+                    />
+                    {cart.itemCount > 0 && (
+                        <div className="loupe-count">
+                            {cart.itemCount}
+                        </div>
+                    )}
+                </div>
             )}
         </Container>
     )

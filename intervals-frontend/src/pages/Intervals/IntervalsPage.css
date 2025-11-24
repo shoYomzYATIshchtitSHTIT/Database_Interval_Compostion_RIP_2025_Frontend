@@ -103,3 +103,70 @@
         font-size: 1rem;
     }
 }
+
+/* Стили для иконки лупы */
+.loupe-icon {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 80px;
+    height: 80px;
+    cursor: pointer;
+    z-index: 1000;
+    transition: transform 0.2s ease;
+}
+
+.loupe-icon:hover {
+    transform: scale(1.05);
+}
+
+.loupe-icon.active {
+    cursor: pointer;
+}
+
+.loupe-icon.inactive {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.loupe-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.loupe-count {
+    position: absolute;
+    top: 80%;
+    left: 90%;
+    transform: translate(-50%, -50%);
+    color: black;
+    font-size: 1.2rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+}
+
+/* Анимация при добавлении в корзину */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.loupe-icon.pulse {
+    animation: pulse 0.3s ease-in-out;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .loupe-icon {
+        width: 60px;
+        height: 60px;
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .loupe-count {
+        font-size: 1rem;
+    }
+}
