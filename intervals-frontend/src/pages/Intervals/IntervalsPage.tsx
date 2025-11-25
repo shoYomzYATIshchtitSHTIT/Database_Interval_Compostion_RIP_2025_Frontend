@@ -34,22 +34,19 @@ const IntervalsPage = () => {
     }
 
     const handleAddToCart = async (intervalId: number) => {
-        if (!isAuthenticated) {
-            return
-        }
+        if (!isAuthenticated) return
 
         try {
-            await dispatch(addIntervalToComposition({
-                interval_id: intervalId,
-                amount: 1
-            })).unwrap()
+            await dispatch(
+                addIntervalToComposition({ interval_id: intervalId, amount: 1 })
+            ).unwrap()
         } catch (err: any) {
-            console.error('Ошибка при добавлении в заявку:', err)
+            console.error('Ошибка при добавлении в композицию:', err)
         }
     }
 
     const handleCartClick = () => {
-        if (cart.compositionId) {
+        if (isAuthenticated && cart.compositionId) {
             window.location.href = `/compositions/${cart.compositionId}`
         }
     }
@@ -88,9 +85,13 @@ const IntervalsPage = () => {
                     <div className="intervals-grid">
                         {intervals.map((interval) => (
                             <IntervalCard
-                                key={interval.id} // Используем id как ключ
+                                key={interval.id}
                                 interval={interval}
-                                onAddToCart={isAuthenticated ? () => handleAddToCart(interval.id) : undefined}
+                                onAddToCart={
+                                    isAuthenticated
+                                        ? () => handleAddToCart(interval.id)
+                                        : undefined
+                                }
                             />
                         ))}
                     </div>
@@ -103,25 +104,28 @@ const IntervalsPage = () => {
                 </>
             )}
 
-            {/* Иконка лупы */}
-            {isAuthenticated && (
-                <div
-                    className={`loupe-icon ${cart.itemCount > 0 ? 'active' : 'inactive'}`}
-                    onClick={handleCartClick}
-                    title={cart.itemCount > 0 ? 'Перейти к заявке' : 'Заявка пуста'}
-                >
-                    <img
-                        src={cart.itemCount > 0 ? '/img/loupe.png' : '/img/loupe_grey.png'}
-                        alt="Корзина заявки"
-                        className="loupe-image"
-                    />
-                    {cart.itemCount > 0 && (
-                        <div className="loupe-count">
-                            {cart.itemCount}
-                        </div>
-                    )}
-                </div>
-            )}
+            {/* Иконка корзины (для всех пользователей) */}
+            <div
+                className={`loupe-icon ${
+                    isAuthenticated && cart.itemCount > 0 ? 'active' : 'inactive'
+                }`}
+                onClick={handleCartClick}
+            >
+                <img
+                    src={
+                        isAuthenticated
+                            ? cart.itemCount > 0
+                                ? '/img/loupe.png'
+                                : '/img/loupe_grey.png'
+                            : '/img/loupe_grey.png'
+                    }
+                    alt="Корзина композиций"
+                    className="loupe-image"
+                />
+                {isAuthenticated && cart.itemCount > 0 && (
+                    <div className="loupe-count">{cart.itemCount}</div>
+                )}
+            </div>
         </Container>
     )
 }

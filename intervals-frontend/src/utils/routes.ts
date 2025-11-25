@@ -18,6 +18,6 @@ export const ROUTE_LABELS: { [key in RouteKeyType]: string } = {
     LOGIN: 'Вход',
     REGISTER: 'Регистрация',
     PROFILE: 'Профиль',
-    COMPOSITIONS: 'Мои заявки',
-    COMPOSITION_DETAIL: 'Детали заявки',
+    COMPOSITIONS: 'Мои композиции',
+    COMPOSITION_DETAIL: 'Детали композиции',
 }

@@ -95,16 +95,16 @@ const RegisterForm: React.FC = () => {
                     />
                 </Form.Group>
 
-                <Form.Group className="mb-4">
-                    <Form.Check
-                        type="checkbox"
-                        name="is_moderator"
-                        label="Я модератор"
-                        checked={formData.is_moderator}
-                        onChange={handleChange}
-                        disabled={loading}
-                    />
-                </Form.Group>
+                {/*<Form.Group className="mb-4">*/}
+                {/*    <Form.Check*/}
+                {/*        type="checkbox"*/}
+                {/*        name="is_moderator"*/}
+                {/*        label="Я модератор"*/}
+                {/*        checked={formData.is_moderator}*/}
+                {/*        onChange={handleChange}*/}
+                {/*        disabled={loading}*/}
+                {/*    />*/}
+                {/*</Form.Group>*/}
 
                 <Button
                     variant="primary"

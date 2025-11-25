@@ -61,9 +61,9 @@ const CompositionsPage: React.FC = () => {
         <Container className="py-4">
             <Row className="mb-4">
                 <Col>
-                    <h1>Мои заявки</h1>
+                    <h1>Мои композиции</h1>
                     <p className="text-muted">
-                        {isModerator ? 'Управление всеми заявками системы' : 'Управление вашими музыкальными композициями'}
+                        {isModerator ? 'Управление всеми композиции системы' : 'Управление вашими музыкальными композициями'}
                     </p>
                 </Col>
             </Row>
@@ -123,13 +123,13 @@ const CompositionsPage: React.FC = () => {
                 </Card.Body>
             </Card>
 
-            {/* Список заявок */}
+            {/* Список композиций */}
             <Card>
                 <Card.Header>
                     <Row className="align-items-center">
                         <Col>
                             <h5 className="mb-0">
-                                {isModerator ? 'Все заявки системы' : 'Список заявок'}
+                                {isModerator ? 'Все композиции системы' : 'Список композиций'}
                             </h5>
                         </Col>
                         <Col xs="auto">
@@ -146,7 +146,7 @@ const CompositionsPage: React.FC = () => {
                 <Card.Body>
                     {compositions.length === 0 ? (
                         <div className="text-center py-4">
-                            <p className="text-muted">Заявки не найдены</p>
+                            <p className="text-muted">Композиции не найдены</p>
                             <Button variant="outline-primary" onClick={() => navigate('/intervals')}>
                                 Перейти к интервалам
                             </Button>

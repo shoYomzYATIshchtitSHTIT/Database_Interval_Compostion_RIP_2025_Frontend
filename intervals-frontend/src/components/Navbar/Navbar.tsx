@@ -73,7 +73,7 @@ const Navbar = () => {
                                     className={isActiveRoute(ROUTES.PROFILE) ? 'active' : ''}
                                 >
                                     {user?.login
-                                        ? `${user.login} (${user.is_moderator ? 'Модератор' : 'Пользователь'})`
+                                        ? `${user.login} (${user.is_moderator ? 'Музыкальный эксперт' : 'Музыкальный аналитик'})`
                                         : 'Загрузка...'}
                                 </Nav.Link>
                                 <Button
