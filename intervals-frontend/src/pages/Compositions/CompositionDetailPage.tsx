@@ -7,7 +7,8 @@ import {
     updateCompositionFields,
     updateIntervalAmount,
     deleteComposition,
-    formComposition
+    formComposition,
+    removeIntervalFromComposition // <-- thunk для удаления интервала
 } from '../../store/slices/compositionsSlice'
 import { useParams, useNavigate } from 'react-router-dom'
 
@@ -22,88 +23,60 @@ const CompositionDetailPage = () => {
 
     // ---------- Load composition ----------
     useEffect(() => {
-        if (id) {
-            console.log(`[USEEFFECT] Loading composition with ID: ${id}`)
-            dispatch(getCompositionDetail(Number(id)))
-        }
+        if (id) dispatch(getCompositionDetail(Number(id)))
     }, [dispatch, id])
 
     // ---------- Update local state when composition changes ----------
     useEffect(() => {
-        console.log('[USEEFFECT] currentComposition changed:', currentComposition)
         if (currentComposition) {
             setCompositionName(currentComposition.title || '')
             const amounts: Record<number, number> = {}
             currentComposition.intervals?.forEach((interval) => {
                 amounts[interval.interval_id] = interval.amount || 1
-                console.log(`[INTERVAL] ID: ${interval.interval_id}, Title: ${interval.title}, Description: ${interval.description}, Tone: ${interval.tone}, Amount: ${interval.amount}`)
             })
             setIntervalAmounts(amounts)
         }
     }, [currentComposition])
 
     // ---------- Handlers ----------
-    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        console.log('[HANDLE_NAME_CHANGE] New title:', e.target.value)
-        setCompositionName(e.target.value)
-    }
-
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => setCompositionName(e.target.value)
     const handleSaveName = () => {
-        if (currentComposition) {
-            console.log('[HANDLE_SAVE_NAME] Saving title:', compositionName)
-            dispatch(updateCompositionFields({ id: currentComposition.id, updates: { title: compositionName } }))
-        }
+        if (currentComposition) dispatch(updateCompositionFields({ id: currentComposition.id, updates: { title: compositionName } }))
     }
 
     const handleAmountChange = (intervalId: number, value: number) => {
-        setIntervalAmounts((prev) => ({ ...prev, [intervalId]: value }))
+        setIntervalAmounts(prev => ({ ...prev, [intervalId]: value }))
     }
 
     const handleSaveAmount = (intervalId: number) => {
         if (currentComposition) {
             const amount = intervalAmounts[intervalId]
-            console.log(`[HANDLE_SAVE_AMOUNT] Saving amount: IntervalID=${intervalId}, Amount=${amount}`)
             dispatch(updateIntervalAmount({ composition_id: currentComposition.id, interval_id: intervalId, amount }))
         }
     }
 
-    const handleFormComposition = () => {
+    const handleDeleteInterval = (intervalId: number) => {
         if (currentComposition) {
-            console.log('[HANDLE_FORM_COMPOSITION] Forming composition ID:', currentComposition.id)
-            dispatch(formComposition(currentComposition.id))
+            dispatch(removeIntervalFromComposition({ composition_id: currentComposition.id, interval_id: intervalId }))
         }
+    }
+
+    const handleFormComposition = () => {
+        if (currentComposition) dispatch(formComposition(currentComposition.id))
     }
 
     const handleDeleteComposition = () => {
         if (currentComposition) {
-            console.log('[HANDLE_DELETE_COMPOSITION] Deleting composition ID:', currentComposition.id)
             dispatch(deleteComposition(currentComposition.id))
             navigate('/compositions')
         }
     }
 
     // ---------- Loading / Error states ----------
-    if (loading || !currentComposition) {
-        console.log('[RENDER] Loading or composition not loaded yet')
-        return (
-            <Container className="mt-4 text-center">
-                <Spinner animation="border" variant="primary" />
-            </Container>
-        )
-    }
-
-    if (error) {
-        console.error('[RENDER] Error:', error)
-        return (
-            <Container className="mt-4">
-                <Alert variant="danger">{error}</Alert>
-            </Container>
-        )
-    }
+    if (loading || !currentComposition) return <Container className="mt-4 text-center"><Spinner animation="border" /></Container>
+    if (error) return <Container className="mt-4"><Alert variant="danger">{error}</Alert></Container>
 
     // ---------- Main render ----------
-    console.log('[RENDER] Rendering composition page with title:', compositionName)
-
     return (
         <Container className="mt-4 composition-page">
             <h2>Составление заявки</h2>
@@ -119,7 +92,7 @@ const CompositionDetailPage = () => {
                 </Button>
             </Form.Group>
 
-            {currentComposition.intervals && currentComposition.intervals.length > 0 ? (
+            {currentComposition.intervals?.length ? (
                 currentComposition.intervals.map((interval) => (
                     <Card key={interval.interval_id} className="mb-3">
                         <Row className="g-0 align-items-center">
@@ -139,7 +112,7 @@ const CompositionDetailPage = () => {
                             </Col>
                             <Col md={3} className="text-center">
                                 <Form.Label>Количество</Form.Label>
-                                <Row className="g-2">
+                                <Row className="g-2 mb-2">
                                     <Col>
                                         <Form.Control
                                             type="number"
@@ -157,6 +130,13 @@ const CompositionDetailPage = () => {
                                         </Button>
                                     </Col>
                                 </Row>
+                                <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => handleDeleteInterval(interval.interval_id)}
+                                >
+                                    Удалить
+                                </Button>
                             </Col>
                         </Row>
                     </Card>
