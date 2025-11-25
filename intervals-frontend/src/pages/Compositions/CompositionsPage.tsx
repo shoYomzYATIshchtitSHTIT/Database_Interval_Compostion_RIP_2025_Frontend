@@ -7,7 +7,7 @@ import { getCompositions, getCompositionCart } from '../../store/slices/composit
 
 const CompositionsPage: React.FC = () => {
     const { compositions, loading, error } = useSelector((state: RootState) => state.compositions);
-    const { user } = useSelector((state: RootState) => state.auth); // Оставляем для будущих проверок прав
+    const { user } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
 
@@ -17,10 +17,17 @@ const CompositionsPage: React.FC = () => {
         date_to: '',
     });
 
+    const isModerator = user?.is_moderator;
+
+    // ---------- Load compositions ----------
     useEffect(() => {
-        dispatch(getCompositions(filters));
+        const query: any = { ...filters };
+        if (!isModerator) {
+            query.creator_id = user?.id; // показываем только заявки текущего пользователя
+        }
+        dispatch(getCompositions(query));
         dispatch(getCompositionCart());
-    }, [dispatch, filters]);
+    }, [dispatch, filters, user, isModerator]);
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -44,8 +51,25 @@ const CompositionsPage: React.FC = () => {
         return new Date(dateString).toLocaleDateString('ru-RU');
     };
 
-    // Добавляем проверку, является ли пользователь модератором для отображения дополнительной информации
-    const isModerator = user?.is_moderator;
+    // ---------- Фильтруем и сортируем для обычного пользователя ----------
+    const displayedCompositions = React.useMemo(() => {
+        let list = compositions;
+
+        // Для обычного пользователя оставляем только свои композиции
+        if (!isModerator) {
+            list = list.filter(c => c.creator_id === user?.id);
+        }
+
+        // Черновики выше
+        list.sort((a, b) => {
+            if (a.status === 'Черновик' && b.status !== 'Черновик') return -1;
+            if (a.status !== 'Черновик' && b.status === 'Черновик') return 1;
+            // затем по дате создания
+            return new Date(b.date_create).getTime() - new Date(a.date_create).getTime();
+        });
+
+        return list;
+    }, [compositions, user, isModerator]);
 
     if (loading) {
         return (
@@ -63,16 +87,12 @@ const CompositionsPage: React.FC = () => {
                 <Col>
                     <h1>Мои композиции</h1>
                     <p className="text-muted">
-                        {isModerator ? 'Управление всеми композиции системы' : 'Управление вашими музыкальными композициями'}
+                        {isModerator ? 'Управление всеми композициями системы' : 'Управление вашими музыкальными композициями'}
                     </p>
                 </Col>
             </Row>
 
-            {error && (
-                <Alert variant="danger" className="mb-4">
-                    {error}
-                </Alert>
-            )}
+            {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
 
             {/* Фильтры */}
             <Card className="mb-4">
@@ -128,9 +148,7 @@ const CompositionsPage: React.FC = () => {
                 <Card.Header>
                     <Row className="align-items-center">
                         <Col>
-                            <h5 className="mb-0">
-                                {isModerator ? 'Все композиции системы' : 'Список композиций'}
-                            </h5>
+                            <h5 className="mb-0">{isModerator ? 'Все композиции системы' : 'Список композиций'}</h5>
                         </Col>
                         <Col xs="auto">
                             <Button
@@ -144,7 +162,7 @@ const CompositionsPage: React.FC = () => {
                     </Row>
                 </Card.Header>
                 <Card.Body>
-                    {compositions.length === 0 ? (
+                    {displayedCompositions.length === 0 ? (
                         <div className="text-center py-4">
                             <p className="text-muted">Композиции не найдены</p>
                             <Button variant="outline-primary" onClick={() => navigate('/intervals')}>
@@ -165,7 +183,7 @@ const CompositionsPage: React.FC = () => {
                             </tr>
                             </thead>
                             <tbody>
-                            {compositions.map((composition) => (
+                            {displayedCompositions.map((composition) => (
                                 <tr key={composition.id}>
                                     <td>{composition.id}</td>
                                     <td>

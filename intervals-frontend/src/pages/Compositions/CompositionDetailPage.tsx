@@ -8,9 +8,10 @@ import {
     updateIntervalAmount,
     deleteComposition,
     formComposition,
-    removeIntervalFromComposition // <-- thunk для удаления интервала
+    removeIntervalFromComposition
 } from '../../store/slices/compositionsSlice'
 import { useParams, useNavigate } from 'react-router-dom'
+import './CompositionDetailPage.css'
 
 const CompositionDetailPage = () => {
     const { id } = useParams<{ id: string }>()
@@ -21,12 +22,10 @@ const CompositionDetailPage = () => {
     const [compositionName, setCompositionName] = useState('')
     const [intervalAmounts, setIntervalAmounts] = useState<Record<number, number>>({})
 
-    // ---------- Load composition ----------
     useEffect(() => {
         if (id) dispatch(getCompositionDetail(Number(id)))
     }, [dispatch, id])
 
-    // ---------- Update local state when composition changes ----------
     useEffect(() => {
         if (currentComposition) {
             setCompositionName(currentComposition.title || '')
@@ -38,10 +37,9 @@ const CompositionDetailPage = () => {
         }
     }, [currentComposition])
 
-    // ---------- Handlers ----------
-    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => setCompositionName(e.target.value)
     const handleSaveName = () => {
-        if (currentComposition) dispatch(updateCompositionFields({ id: currentComposition.id, updates: { title: compositionName } }))
+        if (currentComposition)
+            dispatch(updateCompositionFields({ id: currentComposition.id, updates: { title: compositionName } }))
     }
 
     const handleAmountChange = (intervalId: number, value: number) => {
@@ -49,16 +47,20 @@ const CompositionDetailPage = () => {
     }
 
     const handleSaveAmount = (intervalId: number) => {
-        if (currentComposition) {
-            const amount = intervalAmounts[intervalId]
-            dispatch(updateIntervalAmount({ composition_id: currentComposition.id, interval_id: intervalId, amount }))
-        }
+        if (currentComposition)
+            dispatch(updateIntervalAmount({
+                composition_id: currentComposition.id,
+                interval_id: intervalId,
+                amount: intervalAmounts[intervalId]
+            }))
     }
 
     const handleDeleteInterval = (intervalId: number) => {
-        if (currentComposition) {
-            dispatch(removeIntervalFromComposition({ composition_id: currentComposition.id, interval_id: intervalId }))
-        }
+        if (currentComposition)
+            dispatch(removeIntervalFromComposition({
+                composition_id: currentComposition.id,
+                interval_id: intervalId
+            }))
     }
 
     const handleFormComposition = () => {
@@ -72,88 +74,99 @@ const CompositionDetailPage = () => {
         }
     }
 
-    // ---------- Loading / Error states ----------
-    if (loading || !currentComposition) return <Container className="mt-4 text-center"><Spinner animation="border" /></Container>
-    if (error) return <Container className="mt-4"><Alert variant="danger">{error}</Alert></Container>
+    if (loading || !currentComposition)
+        return <Container className="mt-4 text-center"><Spinner animation="border" /></Container>
 
-    // ---------- Main render ----------
+    if (error)
+        return <Container className="mt-4"><Alert variant="danger">{error}</Alert></Container>
+
     return (
-        <Container className="mt-4 composition-page">
-            <h2>Составление заявки</h2>
-            <Form.Group className="mb-3">
-                <Form.Control
-                    type="text"
-                    placeholder="Введите название произведения"
-                    value={compositionName}
-                    onChange={handleNameChange}
-                />
-                <Button className="mt-2" variant="primary" onClick={handleSaveName}>
-                    Сохранить название
-                </Button>
-            </Form.Group>
+        <>
+            {/* ОСНОВНОЕ СОДЕРЖАНИЕ */}
+            <Container className="mt-4 composition-page">
+                <h2>Составление заявки</h2>
 
-            {currentComposition.intervals?.length ? (
-                currentComposition.intervals.map((interval) => (
-                    <Card key={interval.interval_id} className="mb-3">
-                        <Row className="g-0 align-items-center">
-                            <Col md={3}>
-                                <Card.Img
-                                    src={interval.photo || '/img/default_interval.png'}
-                                    alt={interval.title}
-                                    className="p-2"
-                                />
-                            </Col>
-                            <Col md={6}>
-                                <Card.Body>
-                                    <Card.Title>{interval.title}</Card.Title>
-                                    {interval.description && <Card.Text>{interval.description}</Card.Text>}
-                                    {interval.tone !== undefined && <Card.Text>Тон: {interval.tone}</Card.Text>}
-                                </Card.Body>
-                            </Col>
-                            <Col md={3} className="text-center">
-                                <Form.Label>Количество</Form.Label>
-                                <Row className="g-2 mb-2">
-                                    <Col>
-                                        <Form.Control
-                                            type="number"
-                                            min={1}
-                                            value={intervalAmounts[interval.interval_id] || 1}
-                                            onChange={(e) => handleAmountChange(interval.interval_id, Number(e.target.value))}
-                                        />
-                                    </Col>
-                                    <Col>
-                                        <Button
-                                            variant="primary"
-                                            onClick={() => handleSaveAmount(interval.interval_id)}
-                                        >
-                                            Сохранить
-                                        </Button>
-                                    </Col>
-                                </Row>
-                                <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={() => handleDeleteInterval(interval.interval_id)}
-                                >
-                                    Удалить
-                                </Button>
-                            </Col>
-                        </Row>
-                    </Card>
-                ))
-            ) : (
-                <p>Интервалы не добавлены</p>
+                <Form.Group className="mb-3">
+                    <Form.Control
+                        type="text"
+                        placeholder="Введите название произведения"
+                        value={compositionName}
+                        onChange={(e) => setCompositionName(e.target.value)}
+                    />
+                    <Button className="mt-2" variant="primary" onClick={handleSaveName}>
+                        Сохранить название
+                    </Button>
+                </Form.Group>
+
+                {currentComposition.intervals?.length ? (
+                    currentComposition.intervals.map((interval) => (
+                        <Card key={interval.interval_id} className="mb-3">
+                            <Row className="g-0 align-items-center">
+                                <Col md={3}>
+                                    <Card.Img
+                                        src={interval.photo || '/img/default_interval.png'}
+                                        alt={interval.title}
+                                        className="p-2"
+                                    />
+                                </Col>
+                                <Col md={6}>
+                                    <Card.Body>
+                                        <Card.Title>{interval.title}</Card.Title>
+                                        {interval.description && <Card.Text>{interval.description}</Card.Text>}
+                                        {interval.tone !== undefined && <Card.Text>Тон: {interval.tone}</Card.Text>}
+                                    </Card.Body>
+                                </Col>
+                                <Col md={3} className="text-center">
+                                    <Form.Label>Количество</Form.Label>
+                                    <Row className="g-2 mb-2">
+                                        <Col>
+                                            <Form.Control
+                                                type="number"
+                                                min={1}
+                                                value={intervalAmounts[interval.interval_id] || 1}
+                                                onChange={(e) => handleAmountChange(interval.interval_id, Number(e.target.value))}
+                                            />
+                                        </Col>
+                                        <Col>
+                                            <Button variant="primary" onClick={() => handleSaveAmount(interval.interval_id)}>
+                                                Сохранить
+                                            </Button>
+                                        </Col>
+                                    </Row>
+
+                                    <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={() => handleDeleteInterval(interval.interval_id)}
+                                    >
+                                        Удалить
+                                    </Button>
+                                </Col>
+                            </Row>
+                        </Card>
+                    ))
+                ) : (
+                    <p>Интервалы не добавлены</p>
+                )}
+
+                <div className="d-flex justify-content-between mt-4">
+                    <Button variant="success" onClick={handleFormComposition}>
+                        Сформировать заявку
+                    </Button>
+                    <Button variant="danger" onClick={handleDeleteComposition}>
+                        Удалить заявку
+                    </Button>
+                </div>
+            </Container>
+
+            {currentComposition.status === "Завершена" && (
+                <div className="composition-result-wrapper">
+                    <div className="composition-result">
+                        Композиция {currentComposition.belonging} к классицизму
+                    </div>
+                </div>
             )}
-
-            <div className="d-flex justify-content-between mt-4">
-                <Button variant="success" onClick={handleFormComposition}>
-                    Сформировать заявку
-                </Button>
-                <Button variant="danger" onClick={handleDeleteComposition}>
-                    Удалить заявку
-                </Button>
-            </div>
-        </Container>
+        </>
     )
 }
 
