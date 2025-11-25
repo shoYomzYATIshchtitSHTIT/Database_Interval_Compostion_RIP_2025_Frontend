@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit'
 import filtersReducer from './slices/filtersSlice'
-import authReducer from './slices/authSlice'
+import authReducer, { resetAuth } from './slices/authSlice'
 import compositionsReducer from './slices/compositionsSlice'
 import intervalsReducer from './slices/intervalsSlice'
 
@@ -14,9 +14,11 @@ const store = configureStore({
     devTools: import.meta.env.DEV
 })
 
-// Экспортируем типы правильно
+// Сбрасываем пользователя на гостя при инициализации (например, после F5)
+store.dispatch(resetAuth())
+
+// Экспортируем типы
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
 
-// Экспортируем сам store
 export { store }
