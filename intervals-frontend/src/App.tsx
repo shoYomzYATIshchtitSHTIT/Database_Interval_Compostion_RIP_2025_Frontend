@@ -7,7 +7,7 @@ import IntervalDetailPage from './pages/IntervalDetail/IntervalDetailPage';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import ProfilePage from './pages/Auth/ProfilePage';
-import CompositionsPage from './pages/Compositions/CompositionsPage';
+import CompositionsPage from './pages/Compositions/CompositionsPage'; // Одна страница для всех
 import CompositionDetailPage from './pages/Compositions/CompositionDetailPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { ROUTES } from './utils/routes';
@@ -24,28 +24,31 @@ function App() {
                     <Route path={ROUTES.INTERVAL_DETAIL} element={<IntervalDetailPage />} />
 
                     {/* Public auth routes */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+                    <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
 
                     {/* Protected routes */}
                     <Route
-                        path="/profile"
+                        path={ROUTES.PROFILE}
                         element={
                             <ProtectedRoute>
                                 <ProfilePage />
                             </ProtectedRoute>
                         }
                     />
+
+                    {/* Один маршрут для всех пользователей */}
                     <Route
-                        path="/compositions"
+                        path={ROUTES.COMPOSITIONS}
                         element={
                             <ProtectedRoute>
                                 <CompositionsPage />
                             </ProtectedRoute>
                         }
                     />
+
                     <Route
-                        path="/compositions/:id"
+                        path={ROUTES.COMPOSITION_DETAIL}
                         element={
                             <ProtectedRoute>
                                 <CompositionDetailPage />

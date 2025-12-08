@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
     Container, Row, Col, Card, Button, Table, Badge,
-    Spinner, Alert, Form
+    Spinner, Alert, Form, Modal
 } from 'react-bootstrap';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -9,36 +9,37 @@ import type { RootState, AppDispatch } from '../../store';
 import {
     getCompositions,
     completeComposition,
-    rejectComposition,
-    formComposition,
-    deleteComposition,
-    clearError
+    rejectComposition
 } from '../../store/slices/compositionsSlice';
 
 
-const CompositionsPage: React.FC = () => {
+const ModeratorCompositionsPage: React.FC = () => {
     const { compositions, loading, error } = useSelector((state: RootState) => state.compositions);
     const { user } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
-
-    const isModerator = user?.is_moderator;
 
     // Состояния фильтров
     const [filters, setFilters] = useState({
         status: '',
         date_from: '',
         date_to: '',
-        creator_filter: '', // Фильтр по создателю на фронтенде (только для модератора)
+        creator_filter: '', // Фильтр по создателю на фронтенде
     });
 
-    // Состояния для Short Polling (только для модератора)
+    // Состояния для Short Polling
     const [pollingActive, setPollingActive] = useState<boolean>(true);
     const [lastUpdateTime, setLastUpdateTime] = useState<string>('');
+    const [autoRefreshCount, setAutoRefreshCount] = useState<number>(0);
+
+    // Состояния для модального окна
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [selectedCompositionId, setSelectedCompositionId] = useState<number | null>(null);
+    const [selectedCompositionTitle, setSelectedCompositionTitle] = useState<string>('');
 
     // Функция загрузки композиций
     const loadCompositions = useCallback(() => {
-        // Бэкенд фильтры
+        // Бэкенд фильтры (только даты и статус)
         const backendFilters = {
             status: filters.status,
             date_from: filters.date_from,
@@ -47,74 +48,56 @@ const CompositionsPage: React.FC = () => {
 
         dispatch(getCompositions(backendFilters));
         setLastUpdateTime(new Date().toLocaleTimeString('ru-RU'));
+        setAutoRefreshCount(prev => prev + 1);
     }, [dispatch, filters.status, filters.date_from, filters.date_to]);
 
-    // === SHORT POLLING ТОЛЬКО ДЛЯ МОДЕРАТОРА ===
+    // === SHORT POLLING ЛОГИКА ===
     useEffect(() => {
-        if (!isModerator) {
-            // Для обычного пользователя - загрузка при монтировании и изменении фильтров
-            loadCompositions();
-            return;
-        }
+        if (!user?.is_moderator) return;
 
-        // Для модератора - первая загрузка + Short Polling
+        // Первая загрузка
         loadCompositions();
 
         if (pollingActive) {
+            // Запуск Short Polling каждые 5 секунд
             const intervalId = setInterval(() => {
                 loadCompositions();
-            }, 5000); // 5 секунд
+            }, 5000); // 5000 мс = 5 секунд
 
+            // Очистка интервала при размонтировании или изменении pollingActive
             return () => {
                 clearInterval(intervalId);
             };
         }
-    }, [isModerator, pollingActive, loadCompositions]);
-
-    // Для обычного пользователя - дополнительная загрузка при изменении фильтров
-    useEffect(() => {
-        if (!isModerator) {
-            loadCompositions();
-        }
-    }, [isModerator, filters, loadCompositions]);
+    }, [user, pollingActive, loadCompositions]);
 
     // Обработчики действий
-    const handleComplete = async (compositionId: number) => {
-        try {
-            await dispatch(completeComposition(compositionId)).unwrap();
-            // Автоматическое обновление через 2 секунды
-            setTimeout(() => {
-                loadCompositions();
-            }, 2000);
-        } catch (error: any) {
-            console.error('Complete error:', error);
+    const handleCompleteClick = (compositionId: number, title?: string) => {
+        setSelectedCompositionId(compositionId);
+        setSelectedCompositionTitle(title || `#${compositionId}`);
+        setShowCompleteModal(true);
+    };
+
+    const handleConfirmComplete = async () => {
+        if (selectedCompositionId) {
+            try {
+                await dispatch(completeComposition(selectedCompositionId)).unwrap();
+                alert(`Заявка "${selectedCompositionTitle}" завершена. Запущен асинхронный расчёт принадлежности (5-10 секунд).`);
+            } catch (error) {
+                alert('Ошибка при завершении заявки');
+            }
+            setShowCompleteModal(false);
         }
     };
 
-    const handleReject = async (compositionId: number) => {
-        try {
-            await dispatch(rejectComposition(compositionId)).unwrap();
-            loadCompositions();
-        } catch (error: any) {
-            console.error('Reject error:', error);
-        }
-    };
-
-    const handleForm = async (compositionId: number) => {
-        try {
-            await dispatch(formComposition(compositionId)).unwrap();
-            loadCompositions();
-        } catch (error: any) {
-            console.error('Form error:', error);
-        }
-    };
-
-    const handleDelete = async (compositionId: number) => {
-        try {
-            await dispatch(deleteComposition(compositionId)).unwrap();
-            loadCompositions();
-        } catch (error: any) {
-            console.error('Delete error:', error);
+    const handleReject = async (compositionId: number, title?: string) => {
+        if (window.confirm(`Отклонить заявку "${title || '#' + compositionId}"?`)) {
+            try {
+                await dispatch(rejectComposition(compositionId)).unwrap();
+                alert('Заявка отклонена');
+            } catch (error) {
+                alert('Ошибка при отклонении заявки');
+            }
         }
     };
 
@@ -122,38 +105,35 @@ const CompositionsPage: React.FC = () => {
         navigate(`/compositions/${compositionId}`);
     };
 
-    // Фильтрация композиций
+    // Фильтрация композиций на фронтенде
     const filteredCompositions = useMemo(() => {
         let filtered = [...compositions];
 
-        // Для обычного пользователя - показываем только его заявки
-        if (!isModerator) {
-            filtered = filtered.filter(comp => comp.creator_id === user?.id);
-        } else {
-            // Для модератора - фильтрация по создателю на фронтенде
-            if (filters.creator_filter) {
-                filtered = filtered.filter(comp => {
-                    const creatorStr = `Пользователь ${comp.creator_id}`;
-                    return creatorStr.toLowerCase().includes(filters.creator_filter.toLowerCase());
-                });
-            }
+        // Фильтрация по создателю (логину) - на фронтенде
+        if (filters.creator_filter) {
+            filtered = filtered.filter(comp => {
+                const creatorStr = `Пользователь ${comp.creator_id}`;
+                return creatorStr.toLowerCase().includes(filters.creator_filter.toLowerCase());
+            });
         }
 
-        // Сортировка
+        // Сортировка: сначала "Сформирована", потом "Завершена", потом остальные
         filtered.sort((a, b) => {
-            if (a.status === 'Сформирована' && b.status !== 'Сформирована') return -1;
-            if (a.status !== 'Сформирована' && b.status === 'Сформирована') return 1;
+            const statusOrder = { 'Сформирована': 1, 'Завершена': 2, 'Отклонена': 3, 'Черновик': 4 };
+            const orderA = statusOrder[a.status as keyof typeof statusOrder] || 5;
+            const orderB = statusOrder[b.status as keyof typeof statusOrder] || 5;
 
-            // Затем по дате создания (новые сверху)
+            if (orderA !== orderB) return orderA - orderB;
             return new Date(b.date_create).getTime() - new Date(a.date_create).getTime();
         });
 
         return filtered;
-    }, [compositions, isModerator, user, filters.creator_filter]);
+    }, [compositions, filters.creator_filter]);
 
     // Вспомогательные функции
     const getStatusVariant = (status: string) => {
         switch (status) {
+            case 'Черновик': return 'secondary';
             case 'Сформирована': return 'primary';
             case 'Завершена': return 'success';
             case 'Отклонена': return 'danger';
@@ -185,11 +165,11 @@ const CompositionsPage: React.FC = () => {
         });
     };
 
+
     const togglePolling = () => {
         setPollingActive(!pollingActive);
     };
 
-    // Рендеринг UI в зависимости от роли
     if (loading && compositions.length === 0) {
         return (
             <Container className="py-5 text-center">
@@ -206,40 +186,32 @@ const CompositionsPage: React.FC = () => {
             {/* Заголовок и управление */}
             <Row className="mb-4 align-items-center">
                 <Col>
-                    <h1>{isModerator ? 'Панель модератора' : 'Мои композиции'}</h1>
-                    <p className="text-muted mb-0">
-                        {isModerator
-                            ? 'Управление всеми заявками системы'
-                            : 'Управление вашими музыкальными композициями'}
-                    </p>
+                    <h1>Панель модератора</h1>
+                    <p className="text-muted mb-0">Управление всеми заявками системы</p>
                 </Col>
                 <Col xs="auto">
                     <div className="d-flex gap-2 align-items-center">
-                        {/* Short Polling управление - только для модератора */}
-                        {isModerator && (
-                            <>
-                                <div className="me-3">
-                                    <Badge bg={pollingActive ? "success" : "secondary"}>
-                                        <i className={`bi bi-${pollingActive ? 'play' : 'pause'}-circle me-1`}></i>
-                                        Auto-refresh {pollingActive ? 'ON' : 'OFF'}
-                                    </Badge>
-                                    {lastUpdateTime && (
-                                        <small className="text-muted ms-2">
-                                            Обновлено: {lastUpdateTime}
-                                        </small>
-                                    )}
-                                </div>
+                        {/* Индикатор Short Polling */}
+                        <div className="me-3">
+                            <Badge bg={pollingActive ? "success" : "secondary"}>
+                                <i className={`bi bi-${pollingActive ? 'play' : 'pause'}-circle me-1`}></i>
+                                Auto-refresh {pollingActive ? 'ON' : 'OFF'}
+                            </Badge>
+                            {lastUpdateTime && (
+                                <small className="text-muted ms-2">
+                                    Обновлено: {lastUpdateTime}
+                                </small>
+                            )}
+                        </div>
 
-                                <Button
-                                    variant={pollingActive ? "outline-warning" : "outline-success"}
-                                    size="sm"
-                                    onClick={togglePolling}
-                                    title={pollingActive ? "Остановить автообновление" : "Включить автообновление"}
-                                >
-                                    <i className={`bi bi-${pollingActive ? 'pause' : 'play'}-fill`}></i>
-                                </Button>
-                            </>
-                        )}
+                        <Button
+                            variant={pollingActive ? "outline-warning" : "outline-success"}
+                            size="sm"
+                            onClick={togglePolling}
+                            title={pollingActive ? "Остановить автообновление" : "Включить автообновление"}
+                        >
+                            <i className={`bi bi-${pollingActive ? 'pause' : 'play'}-fill`}></i>
+                        </Button>
 
                         <Button
                             variant="outline-primary"
@@ -269,7 +241,7 @@ const CompositionsPage: React.FC = () => {
 
             {/* Сообщения об ошибках */}
             {error && (
-                <Alert variant="danger" className="mb-4" dismissible onClose={() => dispatch(clearError())}>
+                <Alert variant="danger" className="mb-4" dismissible onClose={() => {}}>
                     <Alert.Heading>Ошибка!</Alert.Heading>
                     <p>{error}</p>
                 </Alert>
@@ -285,7 +257,7 @@ const CompositionsPage: React.FC = () => {
                 </Card.Header>
                 <Card.Body>
                     <Row>
-                        <Col md={isModerator ? 3 : 4}>
+                        <Col md={3}>
                             <Form.Group className="mb-3">
                                 <Form.Label>Статус</Form.Label>
                                 <Form.Select
@@ -303,8 +275,22 @@ const CompositionsPage: React.FC = () => {
                             </Form.Group>
                         </Col>
 
+                        <Col md={3}>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Создатель (ID или текст)</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    placeholder="Например: 123 или 'Пользователь'"
+                                    value={filters.creator_filter}
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        creator_filter: e.target.value
+                                    }))}
+                                />
+                            </Form.Group>
+                        </Col>
 
-                        <Col md={isModerator ? 3 : 4}>
+                        <Col md={3}>
                             <Form.Group className="mb-3">
                                 <Form.Label>Дата от</Form.Label>
                                 <Form.Control
@@ -318,7 +304,7 @@ const CompositionsPage: React.FC = () => {
                             </Form.Group>
                         </Col>
 
-                        <Col md={isModerator ? 3 : 4}>
+                        <Col md={3}>
                             <Form.Group className="mb-3">
                                 <Form.Label>Дата до</Form.Label>
                                 <Form.Control
@@ -343,12 +329,10 @@ const CompositionsPage: React.FC = () => {
                                     <Badge bg="primary">
                                         Отфильтровано: {filteredCompositions.length}
                                     </Badge>
-                                    {isModerator && (
-                                        <Badge bg="success" className="ms-2">
-                                            Auto-refresh: {pollingActive ? 'Вкл' : 'Выкл'}
-                                        </Badge>
-                                    )}
                                 </div>
+                                <small className="text-muted">
+                                    Автообновление каждые 5 секунд • Счётчик: {autoRefreshCount}
+                                </small>
                             </div>
                         </Col>
                     </Row>
@@ -362,7 +346,7 @@ const CompositionsPage: React.FC = () => {
                         <Col>
                             <h5 className="mb-0">
                                 <i className="bi bi-list-ul me-2"></i>
-                                {isModerator ? 'Список заявок системы' : 'Мои композиции'}
+                                Список заявок
                                 <Badge bg="secondary" className="ms-2">
                                     {filteredCompositions.length}
                                 </Badge>
@@ -374,9 +358,7 @@ const CompositionsPage: React.FC = () => {
                                     <Badge bg="primary" className="me-1">Сформирована</Badge>
                                     <Badge bg="success" className="me-1">Завершена</Badge>
                                     <Badge bg="danger" className="me-1">Отклонена</Badge>
-                                    {isModerator && (
-                                        <Badge bg="warning" className="me-1">Расчёт...</Badge>
-                                    )}
+                                    <Badge bg="warning" className="me-1">Расчёт...</Badge>
                                 </div>
                             </div>
                         </Col>
@@ -397,13 +379,11 @@ const CompositionsPage: React.FC = () => {
                                 <tr>
                                     <th style={{ width: '80px' }}>ID</th>
                                     <th style={{ width: '150px' }}>Статус</th>
-                                    {isModerator && (
-                                        <th style={{ width: '120px' }}>Создатель</th>
-                                    )}
+                                    <th style={{ width: '120px' }}>Создатель</th>
                                     <th style={{ width: '150px' }}>Принадлежность</th>
                                     <th style={{ width: '120px' }}>Дата создания</th>
                                     <th style={{ width: '120px' }}>Обновлено</th>
-                                    <th style={{ width: isModerator ? '180px' : '150px' }}>Действия</th>
+                                    <th style={{ width: '180px' }}>Действия</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -426,13 +406,11 @@ const CompositionsPage: React.FC = () => {
                                             </Badge>
                                         </td>
 
-                                        {isModerator && (
-                                            <td>
-                                                <div className="d-flex align-items-center">
-                                                    <i className="bi bi-person-circle me-2 text-muted"></i>
-                                                </div>
-                                            </td>
-                                        )}
+                                        <td>
+                                            <div className="d-flex align-items-center">
+                                                <i className="bi bi-person-circle me-2 text-muted"></i>
+                                            </div>
+                                        </td>
 
                                         <td>
                                             <Badge bg={getBelongingVariant(composition.belonging, composition.status)}
@@ -476,35 +454,12 @@ const CompositionsPage: React.FC = () => {
                                                     <i className="bi bi-eye"></i>
                                                 </Button>
 
-                                                {/* Действия для обычного пользователя */}
-                                                {!isModerator && composition.status === 'Черновик' && (
+                                                {composition.status === 'Сформирована' && (
                                                     <>
                                                         <Button
                                                             variant="success"
                                                             size="sm"
-                                                            onClick={() => handleForm(composition.id)}
-                                                            title="Сформировать заявку"
-                                                        >
-                                                            <i className="bi bi-check2-circle"></i>
-                                                        </Button>
-                                                        <Button
-                                                            variant="danger"
-                                                            size="sm"
-                                                            onClick={() => handleDelete(composition.id)}
-                                                            title="Удалить черновик"
-                                                        >
-                                                            <i className="bi bi-trash"></i>
-                                                        </Button>
-                                                    </>
-                                                )}
-
-                                                {/* Действия для модератора */}
-                                                {isModerator && composition.status === 'Сформирована' && (
-                                                    <>
-                                                        <Button
-                                                            variant="success"
-                                                            size="sm"
-                                                            onClick={() => handleComplete(composition.id)}
+                                                            onClick={() => handleCompleteClick(composition.id, composition.title)}
                                                             title="Завершить и запустить расчёт принадлежности"
                                                         >
                                                             <i className="bi bi-check-circle"></i>
@@ -513,7 +468,7 @@ const CompositionsPage: React.FC = () => {
                                                         <Button
                                                             variant="danger"
                                                             size="sm"
-                                                            onClick={() => handleReject(composition.id)}
+                                                            onClick={() => handleReject(composition.id, composition.title)}
                                                             title="Отклонить"
                                                         >
                                                             <i className="bi bi-x-circle"></i>
@@ -535,24 +490,44 @@ const CompositionsPage: React.FC = () => {
                         <Col>
                             <small>
                                 <i className="bi bi-info-circle me-1"></i>
-                                {isModerator
-                                    ? 'Принадлежность рассчитывается асинхронно в течение 5-10 секунд после завершения заявки'
-                                    : 'Принадлежность к классицизму определяется модератором после проверки'}
+                                Принадлежность рассчитывается асинхронно в течение 5-10 секунд после завершения заявки
                             </small>
                         </Col>
-                        {isModerator && (
-                            <Col xs="auto">
-                                <small>
-                                    <i className="bi bi-clock-history me-1"></i>
-                                    Автообновление: {pollingActive ? 'Включено' : 'Отключено'}
-                                </small>
-                            </Col>
-                        )}
+                        <Col xs="auto">
+                            <small>
+                                <i className="bi bi-clock-history me-1"></i>
+                                Автообновление: {pollingActive ? 'Включено' : 'Отключено'}
+                            </small>
+                        </Col>
                     </Row>
                 </Card.Footer>
             </Card>
+
+            {/* Модальное окно подтверждения завершения */}
+            <Modal show={showCompleteModal} onHide={() => setShowCompleteModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Подтверждение завершения</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>Вы уверены, что хотите завершить заявку <strong>"{selectedCompositionTitle}"</strong>?</p>
+                    <Alert variant="info">
+                        <i className="bi bi-info-circle me-2"></i>
+                        После завершения будет автоматически запущен асинхронный расчёт принадлежности к классицизму.
+                        Результат появится через 5-10 секунд.
+                    </Alert>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowCompleteModal(false)}>
+                        Отмена
+                    </Button>
+                    <Button variant="success" onClick={handleConfirmComplete}>
+                        <i className="bi bi-check-circle me-1"></i>
+                        Завершить и запустить расчёт
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Container>
     );
 };
 
-export default CompositionsPage;
+export default ModeratorCompositionsPage;

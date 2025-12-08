@@ -1,3 +1,4 @@
+// utils/routes.ts
 export const ROUTES = {
     HOME: '/',
     INTERVALS: '/intervals',

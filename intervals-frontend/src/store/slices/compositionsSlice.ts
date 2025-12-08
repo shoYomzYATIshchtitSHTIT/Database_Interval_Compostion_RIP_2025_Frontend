@@ -186,6 +186,30 @@ export const deleteComposition = createAsyncThunk(
     }
 );
 
+export const completeComposition = createAsyncThunk(
+    'compositions/completeComposition',
+    async (id: number, { rejectWithValue }) => {
+        try {
+            await api.compositions.completeUpdate({ id });
+            return id;
+        } catch (error: any) {
+            return rejectWithValue(error.response?.data?.error || 'Ошибка завершения заявки');
+        }
+    }
+);
+
+export const rejectComposition = createAsyncThunk(
+    'compositions/rejectComposition',
+    async (id: number, { rejectWithValue }) => {
+        try {
+            await api.compositions.rejectUpdate({ id });
+            return id;
+        } catch (error: any) {
+            return rejectWithValue(error.response?.data?.error || 'Ошибка отклонения заявки');
+        }
+    }
+);
+
 // ================== Slice ==================
 
 export const compositionsSlice = createSlice({
@@ -281,6 +305,15 @@ export const compositionsSlice = createSlice({
                 if (state.currentComposition && state.currentComposition.id === action.payload.id) {
                     state.currentComposition = { ...state.currentComposition, ...action.payload.updates };
                 }
+
+                // Также обновляем в общем списке
+                const index = state.compositions.findIndex(c => c.id === action.payload.id);
+                if (index !== -1) {
+                    state.compositions[index] = {
+                        ...state.compositions[index],
+                        ...action.payload.updates
+                    };
+                }
             })
 
             // Form Composition
@@ -293,6 +326,27 @@ export const compositionsSlice = createSlice({
             // Delete Composition
             .addCase(deleteComposition.fulfilled, (state, action) => {
                 state.compositions = state.compositions.filter(c => c.id !== action.payload);
+            })
+
+            // Complete Composition
+            .addCase(completeComposition.fulfilled, (state, action) => {
+                const comp = state.compositions.find(c => c.id === action.payload);
+                if (comp) {
+                    comp.status = 'Завершена';
+                    comp.belonging = ''; // Очищаем, Django заполнит позже
+                }
+            })
+            .addCase(completeComposition.rejected, (state, action) => {
+                state.error = action.payload as string;
+            })
+
+            // Reject Composition
+            .addCase(rejectComposition.fulfilled, (state, action) => {
+                const comp = state.compositions.find(c => c.id === action.payload);
+                if (comp) comp.status = 'Отклонена';
+            })
+            .addCase(rejectComposition.rejected, (state, action) => {
+                state.error = action.payload as string;
             });
     },
 });
