@@ -1,5 +1,9 @@
 import { Routes, Route } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from './store';
+
 import Navbar from './components/Navbar/Navbar';
 import HomePage from './pages/Home/HomePage';
 import IntervalsPage from './pages/Intervals/IntervalsPage';
@@ -7,13 +11,23 @@ import IntervalDetailPage from './pages/IntervalDetail/IntervalDetailPage';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import ProfilePage from './pages/Auth/ProfilePage';
-import CompositionsPage from './pages/Compositions/CompositionsPage'; // Одна страница для всех
+import CompositionsPage from './pages/Compositions/CompositionsPage';
 import CompositionDetailPage from './pages/Compositions/CompositionDetailPage';
+
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { ROUTES } from './utils/routes';
+import { resetAuth } from './store/slices/authSlice';
+
 import './App.css';
 
 function App() {
+    const dispatch = useDispatch<AppDispatch>();
+
+    useEffect(() => {
+        console.log('[APP] Resetting user locally on F5');
+        dispatch(resetAuth());
+    }, [dispatch]);
+
     return (
         <>
             <Navbar />
@@ -37,7 +51,6 @@ function App() {
                         }
                     />
 
-                    {/* Один маршрут для всех пользователей */}
                     <Route
                         path={ROUTES.COMPOSITIONS}
                         element={

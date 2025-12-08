@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Container, Spinner, Alert } from 'react-bootstrap'
 import { useSelector, useDispatch } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import type { RootState, AppDispatch } from '../../store'
 import { getIntervals, setFilters } from '../../store/slices/intervalsSlice'
 import { getCompositionCart, addIntervalToComposition } from '../../store/slices/compositionsSlice'
@@ -16,8 +17,14 @@ const IntervalsPage = () => {
     const { isAuthenticated } = useSelector((state: RootState) => state.auth)
     const filtersFromStore = useFilters()
     const dispatch = useDispatch<AppDispatch>()
+    const navigate = useNavigate()
+
+    // Логируем каждый рендер
+    console.log('[INTERVALS PAGE] Render', { isAuthenticated, intervals, cart })
 
     useEffect(() => {
+        console.log('[INTERVALS PAGE] useEffect called', { filtersFromStore, isAuthenticated })
+
         // Загружаем интервалы с текущими фильтрами
         dispatch(getIntervals(filtersFromStore))
 
@@ -28,26 +35,34 @@ const IntervalsPage = () => {
     }, [dispatch, filtersFromStore, isAuthenticated])
 
     const handleFiltersChange = (filters: any) => {
-        // Обновляем фильтры в store и загружаем интервалы
+        console.log('[INTERVALS PAGE] Filters changed', filters)
         dispatch(setFilters(filters))
         dispatch(getIntervals(filters))
     }
 
     const handleAddToCart = async (intervalId: number) => {
-        if (!isAuthenticated) return
+        if (!isAuthenticated) {
+            console.log('[INTERVALS PAGE] User not authenticated, cannot add to cart')
+            return
+        }
 
         try {
             await dispatch(
                 addIntervalToComposition({ interval_id: intervalId, amount: 1 })
             ).unwrap()
+            console.log('[INTERVALS PAGE] Interval added to cart', intervalId)
         } catch (err: any) {
-            console.error('Ошибка при добавлении в композицию:', err)
+            console.error('[INTERVALS PAGE] Error adding to composition:', err)
         }
     }
 
     const handleCartClick = () => {
+        console.log('[INTERVALS PAGE] Cart clicked', { isAuthenticated, cart })
         if (isAuthenticated && cart.compositionId) {
-            window.location.href = `/compositions/${cart.compositionId}`
+            navigate(`/compositions/${cart.compositionId}`)
+            console.log('[INTERVALS PAGE] Navigating to composition', cart.compositionId)
+        } else {
+            console.log('[INTERVALS PAGE] Navigation blocked: not authenticated or empty cart')
         }
     }
 
@@ -106,9 +121,7 @@ const IntervalsPage = () => {
 
             {/* Иконка корзины (для всех пользователей) */}
             <div
-                className={`loupe-icon ${
-                    isAuthenticated && cart.itemCount > 0 ? 'active' : 'inactive'
-                }`}
+                className={`loupe-icon ${isAuthenticated && cart.itemCount > 0 ? 'active' : 'inactive'}`}
                 onClick={handleCartClick}
             >
                 <img

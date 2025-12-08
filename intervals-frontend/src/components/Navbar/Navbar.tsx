@@ -13,16 +13,29 @@ const Navbar = () => {
     const dispatch = useDispatch<AppDispatch>()
     const { isAuthenticated, user } = useSelector((state: RootState) => state.auth)
 
+    console.log('[NAVBAR] Render', { isAuthenticated, user, pathname: location.pathname })
+
     // Восстановление пользователя при наличии токена
     useEffect(() => {
         const token = localStorage.getItem('accessToken')
-        if (token && !user) {
+        console.log('[NAVBAR] Checking token', token, 'user:', user)
+
+        if (token && user === null) {  // строго проверяем на null
+            console.log('[NAVBAR] Token found, dispatching getProfile')
             dispatch(getProfile())
         }
     }, [dispatch, user])
 
+
+
+
     const handleLogout = async () => {
+        console.log('[NAVBAR] Logout clicked')
         await dispatch(logoutUser())
+        console.log('[NAVBAR] Tokens after logout:', {
+            accessToken: localStorage.getItem('accessToken'),
+            refreshToken: localStorage.getItem('refreshToken')
+        })
         navigate('/')
     }
 
