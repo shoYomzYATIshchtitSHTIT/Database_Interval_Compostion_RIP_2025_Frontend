@@ -84,7 +84,7 @@ const CompositionDetailPage = () => {
         <>
             {/* ОСНОВНОЕ СОДЕРЖАНИЕ */}
             <Container className="mt-4 composition-page">
-                <h2>Составление заявки</h2>
+                <h2>Составление композиции</h2>
 
                 <Form.Group className="mb-3">
                     <Form.Control
@@ -151,10 +151,10 @@ const CompositionDetailPage = () => {
 
                 <div className="d-flex justify-content-between mt-4">
                     <Button variant="success" onClick={handleFormComposition}>
-                        Сформировать заявку
+                        Сформировать композицию
                     </Button>
                     <Button variant="danger" onClick={handleDeleteComposition}>
-                        Удалить заявку
+                        Удалить композицию
                     </Button>
                 </div>
             </Container>
