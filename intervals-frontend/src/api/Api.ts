@@ -19,6 +19,32 @@ export interface DsInterval {
   tone?: number;
 }
 
+export interface DsIntervalFiltersInfo {
+  title?: string;
+  tone_max?: number;
+  tone_min?: number;
+}
+
+export interface DsPaginatedIntervalsResponse {
+  data?: DsInterval[];
+  filters?: DsIntervalFiltersInfo;
+  pagination?: DsPaginationInfo;
+  stats?: DsQueryStats;
+}
+
+export interface DsPaginationInfo {
+  page?: number;
+  page_size?: number;
+  total?: number;
+  total_pages?: number;
+}
+
+export interface DsQueryStats {
+  execution_time_ms?: number;
+  index_used?: boolean;
+  query_plan?: string;
+}
+
 export interface DsUsers {
   id?: number;
   is_moderator?: boolean;
@@ -29,6 +55,12 @@ export interface HandlerAddIntervalToCompositionRequest {
   /** @min 1 */
   amount: number;
   interval_id: number;
+}
+
+export interface HandlerCalculationResultRequest {
+  api_key: string;
+  composition_id: number;
+  result: string;
 }
 
 export interface HandlerCartInfoResponse {
@@ -56,6 +88,10 @@ export interface HandlerRegisterRequest {
 export interface HandlerRemoveFromCompositionRequest {
   composition_id: number;
   interval_id: number;
+}
+
+export interface HandlerStartCalculationRequest {
+  composition_id: number;
 }
 
 export interface HandlerUpdateCompositionIntervalRequest {
@@ -127,6 +163,19 @@ export interface IntervalsListParams {
   tone_min?: number;
   /** Filter by maximum tone */
   tone_max?: number;
+  /**
+   * Page number (default: 1)
+   * @min 1
+   * @default 1
+   */
+  page?: number;
+  /**
+   * Page size (default: 8, maximum: 8)
+   * @min 1
+   * @max 8
+   * @default 8
+   */
+  page_size?: number;
 }
 
 export interface IntervalsDetailParams {
@@ -447,6 +496,59 @@ export class Api<SecurityDataType extends unknown> {
       }),
 
     /**
+     * @description Принимает результат расчёта от Django-сервиса
+     *
+     * @tags Compositions
+     * @name ReceiveResultCreate
+     * @summary Получить результат расчёта от асинхронного сервиса
+     * @request POST:/compositions/receive-result
+     * @response `200` `Record<string,string>` OK
+     * @response `400` `Record<string,string>` Bad Request
+     * @response `401` `Record<string,string>` Unauthorized
+     * @response `404` `Record<string,string>` Not Found
+     */
+    receiveResultCreate: (
+      request: HandlerCalculationResultRequest,
+      params: RequestParams = {},
+    ) =>
+      this.http.request<Record<string, string>, Record<string, string>>({
+        path: `/compositions/receive-result`,
+        method: "POST",
+        body: request,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Start async calculation of composition belonging (moderator only)
+     *
+     * @tags Compositions
+     * @name StartCalculationCreate
+     * @summary Start async calculation
+     * @request POST:/compositions/start-calculation
+     * @secure
+     * @response `200` `Record<string,string>` OK
+     * @response `400` `Record<string,string>` Bad Request
+     * @response `401` `Record<string,string>` Unauthorized
+     * @response `403` `Record<string,string>` Forbidden
+     * @response `404` `Record<string,string>` Not Found
+     */
+    startCalculationCreate: (
+      request: HandlerStartCalculationRequest,
+      params: RequestParams = {},
+    ) =>
+      this.http.request<Record<string, string>, Record<string, string>>({
+        path: `/compositions/start-calculation`,
+        method: "POST",
+        body: request,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
      * @description Get composition details with intervals
      *
      * @tags Compositions
@@ -596,18 +698,18 @@ export class Api<SecurityDataType extends unknown> {
   };
   intervals = {
     /**
-     * @description Get list of intervals with filtering
+     * @description Get paginated list of intervals with filtering. Always returns paginated response.
      *
      * @tags Intervals
      * @name IntervalsList
-     * @summary Get intervals list
+     * @summary Get intervals list with pagination
      * @request GET:/intervals
-     * @response `200` `(DsInterval)[]` OK
+     * @response `200` `DsPaginatedIntervalsResponse` OK
      * @response `400` `Record<string,string>` Bad Request
      * @response `500` `Record<string,string>` Internal Server Error
      */
     intervalsList: (query: IntervalsListParams, params: RequestParams = {}) =>
-      this.http.request<DsInterval[], Record<string, string>>({
+      this.http.request<DsPaginatedIntervalsResponse, Record<string, string>>({
         path: `/intervals`,
         method: "GET",
         query: query,

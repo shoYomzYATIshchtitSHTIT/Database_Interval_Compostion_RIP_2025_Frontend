@@ -1,9 +1,13 @@
 import { useEffect } from 'react'
-import { Container, Spinner, Alert } from 'react-bootstrap'
+import { Container, Spinner, Alert, Pagination } from 'react-bootstrap'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import type { RootState, AppDispatch } from '../../store'
-import { getIntervals, setFilters } from '../../store/slices/intervalsSlice'
+import {
+    getIntervals,
+    setFilters,
+    setPage
+} from '../../store/slices/intervalsSlice'
 import { getCompositionCart, addIntervalToComposition } from '../../store/slices/compositionsSlice'
 import { useFilters } from '../../store/slices/filtersSlice'
 import Filters from '../../components/Filters/Filters'
@@ -12,59 +16,163 @@ import { ROUTE_LABELS } from '../../utils/routes'
 import './IntervalsPage.css'
 
 const IntervalsPage = () => {
-    const { intervals, loading, error } = useSelector((state: RootState) => state.intervals)
-    const { cart } = useSelector((state: RootState) => state.compositions)
-    const { isAuthenticated } = useSelector((state: RootState) => state.auth)
-    const filtersFromStore = useFilters()
-    const dispatch = useDispatch<AppDispatch>()
-    const navigate = useNavigate()
+    const {
+        intervals,
+        loading,
+        error,
+        pagination
+    } = useSelector((state: RootState) => state.intervals);
+
+    const { cart } = useSelector((state: RootState) => state.compositions);
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const filtersFromStore = useFilters();
+    const dispatch = useDispatch<AppDispatch>();
+    const navigate = useNavigate();
+
+    const { currentPage, pageSize, totalItems, totalPages } = pagination;
 
     // Логируем каждый рендер
-    console.log('[INTERVALS PAGE] Render', { isAuthenticated, intervals, cart })
+    console.log('[INTERVALS PAGE] Render', {
+        isAuthenticated,
+        intervals: intervals.length,
+        pagination,
+        cart
+    });
 
     useEffect(() => {
-        console.log('[INTERVALS PAGE] useEffect called', { filtersFromStore, isAuthenticated })
+        console.log('[INTERVALS PAGE] Загрузка с серверной пагинацией', {
+            filtersFromStore,
+            currentPage,
+            pageSize
+        });
 
-        // Загружаем интервалы с текущими фильтрами
-        dispatch(getIntervals(filtersFromStore))
+        // Загружаем ТОЛЬКО нужную страницу с сервера
+        dispatch(getIntervals({
+            filters: filtersFromStore,
+            page: currentPage,
+            pageSize: 8
+        }));
 
-        // Загружаем корзину для авторизованных пользователей
+        // Загружаем корзину
         if (isAuthenticated) {
-            dispatch(getCompositionCart())
+            dispatch(getCompositionCart());
         }
-    }, [dispatch, filtersFromStore, isAuthenticated])
+    }, [dispatch, filtersFromStore, currentPage, pageSize, isAuthenticated]);
 
     const handleFiltersChange = (filters: any) => {
-        console.log('[INTERVALS PAGE] Filters changed', filters)
-        dispatch(setFilters(filters))
-        dispatch(getIntervals(filters))
-    }
+        console.log('[INTERVALS PAGE] Filters changed', filters);
+        dispatch(setFilters(filters));
+        // Страница сбросится на 1 в reducer
+    };
+
+    const handlePageChange = (pageNumber: number) => {
+        console.log('[INTERVALS PAGE] Page change to', pageNumber);
+        dispatch(setPage(pageNumber));
+    };
 
     const handleAddToCart = async (intervalId: number) => {
         if (!isAuthenticated) {
-            console.log('[INTERVALS PAGE] User not authenticated, cannot add to cart')
-            return
+            console.log('[INTERVALS PAGE] User not authenticated, cannot add to cart');
+            return;
         }
 
         try {
             await dispatch(
                 addIntervalToComposition({ interval_id: intervalId, amount: 1 })
-            ).unwrap()
-            console.log('[INTERVALS PAGE] Interval added to cart', intervalId)
+            ).unwrap();
+            console.log('[INTERVALS PAGE] Interval added to cart', intervalId);
         } catch (err: any) {
-            console.error('[INTERVALS PAGE] Error adding to composition:', err)
+            console.error('[INTERVALS PAGE] Error adding to composition:', err);
         }
-    }
+    };
 
     const handleCartClick = () => {
-        console.log('[INTERVALS PAGE] Cart clicked', { isAuthenticated, cart })
+        console.log('[INTERVALS PAGE] Cart clicked', { isAuthenticated, cart });
         if (isAuthenticated && cart.compositionId) {
-            navigate(`/compositions/${cart.compositionId}`)
-            console.log('[INTERVALS PAGE] Navigating to composition', cart.compositionId)
+            navigate(`/compositions/${cart.compositionId}`);
+            console.log('[INTERVALS PAGE] Navigating to composition', cart.compositionId);
         } else {
-            console.log('[INTERVALS PAGE] Navigation blocked: not authenticated or empty cart')
+            console.log('[INTERVALS PAGE] Navigation blocked: not authenticated or empty cart');
         }
-    }
+    };
+
+    // Создаем элементы пагинации
+    const renderPaginationItems = () => {
+        const items = [];
+        const maxVisiblePages = 5;
+
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        // Кнопка "Первая"
+        items.push(
+            <Pagination.First
+                key="first"
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+            />
+        );
+
+        // Кнопка "Предыдущая"
+        items.push(
+            <Pagination.Prev
+                key="prev"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+            />
+        );
+
+        // Пропуск в начале
+        if (startPage > 1) {
+            items.push(
+                <Pagination.Ellipsis key="ellipsis-start" disabled />
+            );
+        }
+
+        // Нумерованные страницы
+        for (let i = startPage; i <= endPage; i++) {
+            items.push(
+                <Pagination.Item
+                    key={i}
+                    active={i === currentPage}
+                    onClick={() => handlePageChange(i)}
+                >
+                    {i}
+                </Pagination.Item>
+            );
+        }
+
+        // Пропуск в конце
+        if (endPage < totalPages) {
+            items.push(
+                <Pagination.Ellipsis key="ellipsis-end" disabled />
+            );
+        }
+
+        // Кнопка "Следующая"
+        items.push(
+            <Pagination.Next
+                key="next"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+            />
+        );
+
+        // Кнопка "Последняя"
+        items.push(
+            <Pagination.Last
+                key="last"
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+            />
+        );
+
+        return items;
+    };
 
     return (
         <Container>
@@ -111,14 +219,26 @@ const IntervalsPage = () => {
                         ))}
                     </div>
 
-                    <div className="results-count">
-                        <p className="text-muted">
-                            Найдено интервалов: <strong>{intervals.length}</strong>
-                        </p>
+                    <div className="pagination-container d-flex justify-content-between align-items-center mt-4 mb-4">
+                        <div className="results-count">
+                            <p className="text-muted mb-0">
+                                Показано <strong>{intervals.length}</strong> из <strong>{totalItems}</strong> интервалов
+                            </p>
+                            <p className="text-muted mb-0">
+                                Страница <strong>{currentPage}</strong> из <strong>{totalPages}</strong>
+                            </p>
+                        </div>
+
+                        {totalPages > 1 && (
+                            <div className="pagination-wrapper">
+                                <Pagination className="mb-0">
+                                    {renderPaginationItems()}
+                                </Pagination>
+                            </div>
+                        )}
                     </div>
                 </>
             )}
-
             {/* Иконка корзины (для всех пользователей) */}
             <div
                 className={`loupe-icon ${isAuthenticated && cart.itemCount > 0 ? 'active' : 'inactive'}`}
@@ -140,7 +260,7 @@ const IntervalsPage = () => {
                 )}
             </div>
         </Container>
-    )
-}
+    );
+};
 
-export default IntervalsPage
+export default IntervalsPage;

@@ -170,3 +170,72 @@
         font-size: 1rem;
     }
 }
+
+
+/* IntervalsPage.css - добавьте в конец файла */
+
+/* Контейнер пагинации */
+.pagination-container {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    border: 1px solid #dee2e6;
+}
+
+/* Обертка для пагинации */
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+/* Стилизация компонента Pagination */
+.pagination {
+    margin-bottom: 0;
+}
+
+.pagination .page-item .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    margin: 0 2px;
+    min-width: 40px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #fff;
+}
+
+.pagination .page-item:not(.active) .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #007bff;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Информация о результатах */
+.results-count {
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .pagination-container {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .results-count {
+        text-align: center;
+    }
+}
