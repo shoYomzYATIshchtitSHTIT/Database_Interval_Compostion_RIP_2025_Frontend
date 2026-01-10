@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Container, Spinner, Alert, Pagination } from 'react-bootstrap'
+import { useEffect, useState } from 'react' // добавляем useState
+import { Container, Spinner, Alert, Pagination, Button } from 'react-bootstrap' // добавляем Button
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import type { RootState, AppDispatch } from '../../store'
@@ -12,6 +12,8 @@ import { getCompositionCart, addIntervalToComposition } from '../../store/slices
 import { useFilters } from '../../store/slices/filtersSlice'
 import Filters from '../../components/Filters/Filters'
 import IntervalCard from '../../components/IntervalCard/IntervalCard'
+import AssistantModal from '../../components/llm/AssistantModal' // новый импорт
+import { useIntervalsContext } from '../../hooks/useIntervalsContext' // новый импорт
 import { ROUTE_LABELS } from '../../utils/routes'
 import './IntervalsPage.css'
 
@@ -24,12 +26,22 @@ const IntervalsPage = () => {
     } = useSelector((state: RootState) => state.intervals);
 
     const { cart } = useSelector((state: RootState) => state.compositions);
-    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
     const filtersFromStore = useFilters();
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
 
     const { currentPage, pageSize, totalItems, totalPages } = pagination;
+
+    // Состояние для ассистента
+    const [showAssistant, setShowAssistant] = useState(false);
+
+    // Получаем контекст для ассистента
+    const intervalsContext = useIntervalsContext({
+        intervals,
+        filters: filtersFromStore,
+        currentPage
+    });
 
     // Логируем каждый рендер
     console.log('[INTERVALS PAGE] Render', {
@@ -177,10 +189,25 @@ const IntervalsPage = () => {
     return (
         <Container>
             <div className="page-header">
-                <h1>{ROUTE_LABELS.INTERVALS}</h1>
-                <p className="page-subtitle">
-                    Изучите музыкальные интервалы - основные строительные блоки музыки
-                </p>
+                <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h1>{ROUTE_LABELS.INTERVALS}</h1>
+                        <p className="page-subtitle">
+                            Изучите музыкальные интервалы - основные строительные блоки музыки
+                        </p>
+                    </div>
+
+                    {/* Кнопка ассистента - для всех пользователей */}
+                    <Button
+                        variant="outline-primary"
+                        onClick={() => setShowAssistant(true)}
+                        className="assistant-button"
+                        size="sm"
+                    >
+                        <span style={{ marginRight: '8px' }}>🤖</span>
+                        Спросить ассистента
+                    </Button>
+                </div>
             </div>
 
             <Filters onFiltersChange={handleFiltersChange} loading={loading} />
@@ -239,6 +266,7 @@ const IntervalsPage = () => {
                     </div>
                 </>
             )}
+
             {/* Иконка корзины (для всех пользователей) */}
             <div
                 className={`loupe-icon ${isAuthenticated && cart.itemCount > 0 ? 'active' : 'inactive'}`}
@@ -259,6 +287,17 @@ const IntervalsPage = () => {
                     <div className="loupe-count">{cart.itemCount}</div>
                 )}
             </div>
+
+            {/* Модальное окно ассистента */}
+            <AssistantModal
+                show={showAssistant}
+                onHide={() => setShowAssistant(false)}
+                intervalsContext={intervalsContext}
+                userInfo={{
+                    isAuthenticated,
+                    name: user?.login
+                }}
+            />
         </Container>
     );
 };

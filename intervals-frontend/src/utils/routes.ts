@@ -1,4 +1,3 @@
-// utils/routes.ts
 export const ROUTES = {
     HOME: '/',
     INTERVALS: '/intervals',
@@ -8,6 +7,8 @@ export const ROUTES = {
     PROFILE: '/profile',
     COMPOSITIONS: '/compositions',
     COMPOSITION_DETAIL: '/compositions/:id',
+    // Добавляем тестовый маршрут для ассистента
+    ASSISTANT_TEST: '/assistant-test',
 }
 
 export type RouteKeyType = keyof typeof ROUTES
@@ -21,4 +22,6 @@ export const ROUTE_LABELS: { [key in RouteKeyType]: string } = {
     PROFILE: 'Профиль',
     COMPOSITIONS: 'Мои композиции',
     COMPOSITION_DETAIL: 'Детали композиции',
+    // Добавляем label для тестовой страницы
+    ASSISTANT_TEST: 'Тест ассистента',
 }

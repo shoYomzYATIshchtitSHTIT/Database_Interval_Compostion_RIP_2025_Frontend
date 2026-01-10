@@ -13,6 +13,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.80",
     "@reduxjs/toolkit": "^2.10.1",
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.13.2",

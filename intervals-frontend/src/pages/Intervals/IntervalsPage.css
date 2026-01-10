@@ -239,3 +239,49 @@
         text-align: center;
     }
 }
+
+/* Стили для кнопки ассистента */
+.assistant-button {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    border: 2px solid var(--bs-primary);
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.assistant-button:hover {
+    background-color: var(--bs-primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+}
+
+/* Адаптивность для маленьких экранов */
+@media (max-width: 768px) {
+    .assistant-button {
+        margin-top: 10px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .page-header .d-flex {
+        flex-direction: column;
+    }
+}
+
+/* Стили для модального окна ассистента */
+.modal-assistant .modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.modal-assistant .modal-header {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.modal-assistant .modal-body {
+    padding-top: 15px;
+}

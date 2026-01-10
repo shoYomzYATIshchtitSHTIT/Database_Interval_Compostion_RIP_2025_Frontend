@@ -13,6 +13,8 @@ import RegisterPage from './pages/Auth/RegisterPage';
 import ProfilePage from './pages/Auth/ProfilePage';
 import CompositionsPage from './pages/Compositions/CompositionsPage';
 import CompositionDetailPage from './pages/Compositions/CompositionDetailPage';
+// Импортируем тестовую страницу
+import LlmTestPage from './pages/LlmTestPage';
 
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { ROUTES } from './utils/routes';
@@ -36,6 +38,9 @@ function App() {
                     <Route path={ROUTES.HOME} element={<HomePage />} />
                     <Route path={ROUTES.INTERVALS} element={<IntervalsPage />} />
                     <Route path={ROUTES.INTERVAL_DETAIL} element={<IntervalDetailPage />} />
+
+                    {/* Новый тестовый маршрут для ассистента */}
+                    <Route path={ROUTES.ASSISTANT_TEST} element={<LlmTestPage />} />
 
                     {/* Public auth routes */}
                     <Route path={ROUTES.LOGIN} element={<LoginPage />} />
