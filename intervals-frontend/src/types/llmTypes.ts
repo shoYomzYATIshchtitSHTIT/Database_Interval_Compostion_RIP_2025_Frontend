@@ -3,10 +3,17 @@ export type ChatMessage = {
     content: string;
 };
 
+export interface IntervalData {
+    id: number;
+    title: string;
+    description: string;
+    tone: number;
+    photo?: string;
+}
+
 export interface IntervalsContext {
     count: number;
-    titles: string[];
-    tones: number[];
+    intervals: IntervalData[]; // Добавляем полные данные интервалов
     filters?: {
         title?: string;
         toneMin?: number;
@@ -15,12 +22,7 @@ export interface IntervalsContext {
     metadata?: {
         currentPage: number;
         hasFilters: boolean;
+        totalPages: number;
+        totalItems: number;
     };
-}
-
-export interface AssistantConfig {
-    model?: string;
-    temperature?: number;
-    maxTokens?: number;
-    systemPrompt?: string;
 }

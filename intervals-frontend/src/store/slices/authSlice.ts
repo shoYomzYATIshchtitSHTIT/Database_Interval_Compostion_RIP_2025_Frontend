@@ -126,15 +126,20 @@ export const authSlice = createSlice({
             state.user = action.payload;
             state.isAuthenticated = true;
         },
-        checkAuth: (state) => {
-            const token = localStorage.getItem('accessToken');
-            state.isAuthenticated = !!token;
-            console.log('[AUTH] checkAuth, token exists:', !!token);
-        },
-        resetAuth(state) {
+        // Сбрасываем только состояние, но НЕ трогаем токены
+        resetAuthState: (state) => {
+            console.log('[AUTH] resetAuthState called - keeping tokens');
             state.user = null;
             state.isAuthenticated = false;
-
+            state.loading = false;
+            state.error = null;
+        },
+        clearAuth: (state) => {
+            console.log('[AUTH] clearAuth called - full cleanup with tokens');
+            state.user = null;
+            state.isAuthenticated = false;
+            state.loading = false;
+            state.error = null;
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
         },
@@ -222,5 +227,5 @@ export const authSlice = createSlice({
     },
 });
 
-export const {resetAuth,  clearError, setUser, checkAuth } = authSlice.actions;
+export const {resetAuthState,  clearError, setUser  } = authSlice.actions;
 export default authSlice.reducer;

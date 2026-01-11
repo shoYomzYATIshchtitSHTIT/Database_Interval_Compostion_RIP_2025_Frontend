@@ -13,12 +13,11 @@ import RegisterPage from './pages/Auth/RegisterPage';
 import ProfilePage from './pages/Auth/ProfilePage';
 import CompositionsPage from './pages/Compositions/CompositionsPage';
 import CompositionDetailPage from './pages/Compositions/CompositionDetailPage';
-// Импортируем тестовую страницу
 import LlmTestPage from './pages/LlmTestPage';
 
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { ROUTES } from './utils/routes';
-import { resetAuth } from './store/slices/authSlice';
+import { resetAuthState } from './store/slices/authSlice';
 
 import './App.css';
 
@@ -26,8 +25,22 @@ function App() {
     const dispatch = useDispatch<AppDispatch>();
 
     useEffect(() => {
-        console.log('[APP] Resetting user locally on F5');
-        dispatch(resetAuth());
+        console.log('[APP] Resetting auth state on page load (F5)');
+        console.log('[APP] Tokens before reset:', {
+            accessToken: localStorage.getItem('accessToken') ? 'EXISTS' : 'NOT EXISTS',
+            refreshToken: localStorage.getItem('refreshToken') ? 'EXISTS' : 'NOT EXISTS'
+        });
+
+        // Всегда сбрасываем состояние при загрузке страницы
+        dispatch(resetAuthState());
+
+        console.log('[APP] Tokens after reset (should still exist):', {
+            accessToken: localStorage.getItem('accessToken') ? 'EXISTS' : 'NOT EXISTS',
+            refreshToken: localStorage.getItem('refreshToken') ? 'EXISTS' : 'NOT EXISTS'
+        });
+        if (localStorage.getItem('loglevel')) {
+            localStorage.removeItem('loglevel');
+        }
     }, [dispatch]);
 
     return (
@@ -38,15 +51,13 @@ function App() {
                     <Route path={ROUTES.HOME} element={<HomePage />} />
                     <Route path={ROUTES.INTERVALS} element={<IntervalsPage />} />
                     <Route path={ROUTES.INTERVAL_DETAIL} element={<IntervalDetailPage />} />
-
-                    {/* Новый тестовый маршрут для ассистента */}
                     <Route path={ROUTES.ASSISTANT_TEST} element={<LlmTestPage />} />
 
-                    {/* Public auth routes */}
+                    {/* Public auth routes - всегда доступны */}
                     <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                     <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
 
-                    {/* Protected routes */}
+                    {/* Protected routes - требуют явного входа */}
                     <Route
                         path={ROUTES.PROFILE}
                         element={
@@ -55,7 +66,6 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
-
                     <Route
                         path={ROUTES.COMPOSITIONS}
                         element={
@@ -64,7 +74,6 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
-
                     <Route
                         path={ROUTES.COMPOSITION_DETAIL}
                         element={

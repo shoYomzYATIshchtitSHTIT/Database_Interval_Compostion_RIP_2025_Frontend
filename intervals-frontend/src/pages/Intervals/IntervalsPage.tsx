@@ -40,7 +40,7 @@ const IntervalsPage = () => {
     const intervalsContext = useIntervalsContext({
         intervals,
         filters: filtersFromStore,
-        currentPage
+        pagination: pagination
     });
 
     // Логируем каждый рендер

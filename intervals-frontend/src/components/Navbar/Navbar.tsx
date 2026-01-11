@@ -1,9 +1,8 @@
-import { useEffect } from 'react'
 import { Navbar as BSNavbar, Nav, Container, Button } from 'react-bootstrap'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import type { RootState, AppDispatch } from '../../store'
-import { logoutUser, getProfile } from '../../store/slices/authSlice'
+import { logoutUser } from '../../store/slices/authSlice' // Только logout
 import { ROUTES, ROUTE_LABELS } from '../../utils/routes'
 import './Navbar.css'
 
@@ -13,26 +12,23 @@ const Navbar = () => {
     const dispatch = useDispatch<AppDispatch>()
     const { isAuthenticated, user } = useSelector((state: RootState) => state.auth)
 
-    console.log('[NAVBAR] Render', { isAuthenticated, user, pathname: location.pathname })
-
-    // Восстановление пользователя при наличии токена
-    useEffect(() => {
-        const token = localStorage.getItem('accessToken')
-        console.log('[NAVBAR] Checking token', token, 'user:', user)
-
-        if (token && user === null) {  // строго проверяем на null
-            console.log('[NAVBAR] Token found, dispatching getProfile')
-            dispatch(getProfile())
+    console.log('[NAVBAR] Render', {
+        isAuthenticated,
+        user,
+        pathname: location.pathname,
+        tokens: {
+            accessToken: localStorage.getItem('accessToken') ? 'EXISTS' : 'NOT EXISTS',
+            refreshToken: localStorage.getItem('refreshToken') ? 'EXISTS' : 'NOT EXISTS'
         }
-    }, [dispatch, user])
+    })
 
-
-
+    // УБИРАЕМ автоматическое восстановление!
+    // useEffect для восстановления профиля больше не нужен
 
     const handleLogout = async () => {
         console.log('[NAVBAR] Logout clicked')
         await dispatch(logoutUser())
-        console.log('[NAVBAR] Tokens after logout:', {
+        console.log('[NAVBAR] After logout:', {
             accessToken: localStorage.getItem('accessToken'),
             refreshToken: localStorage.getItem('refreshToken')
         })
@@ -100,6 +96,7 @@ const Navbar = () => {
                             </>
                         ) : (
                             <>
+                                {/* Показываем кнопку "Войти" даже если токен есть в localStorage */}
                                 <Nav.Link
                                     as={Link}
                                     to={ROUTES.LOGIN}

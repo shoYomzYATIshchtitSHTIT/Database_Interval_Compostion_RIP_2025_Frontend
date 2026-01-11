@@ -9,8 +9,13 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: FC<ChatWindowProps> = ({ messages, intervals }) => {
-    // Фильтруем системные сообщения (не показываем пользователю)
     const visibleMessages = messages.filter(msg => msg.role !== 'system');
+
+    console.log('[ChatWindow] Messages:', {
+        total: messages.length,
+        visible: visibleMessages.length,
+        lastMessage: visibleMessages[visibleMessages.length - 1]
+    });
 
     return (
         <div className="chat-window" style={{
@@ -24,7 +29,8 @@ const ChatWindow: FC<ChatWindowProps> = ({ messages, intervals }) => {
             {intervals && intervals.count > 0 && (
                 <Alert variant="info" className="py-1 px-2 mb-2" style={{ fontSize: '0.85rem' }}>
                     <small>
-                        Ассистент видит {intervals.count} интервалов на странице
+                        📊 На странице: {intervals.count} интервалов
+                        {intervals.filters?.title && ` • Фильтр: "${intervals.filters.title}"`}
                     </small>
                 </Alert>
             )}
